@@ -1,38 +1,62 @@
+// Verifica si NO es un entorno de producción (como Render) Y dotenv NO está ya cargado
+if (!process.env.NODE_ENV === 'production' && process.env.TOKEN === undefined) {
+    // Si la aplicación no tiene un token definido (estamos localmente sin variables de hosting),
+    // carga el archivo .env localmente.
+    require('dotenv').config();
+}
+
 const { Client, GatewayIntentBits, Events, REST, Routes, SlashCommandBuilder } = require('discord.js');
-require('dotenv').config();
+
+// Usamos process.env directamente, ya sea que dotenv lo haya cargado (local) 
+// o Render lo haya inyectado (producción).
+const TOKEN = process.env.TOKEN;
+const CLIENT_ID = process.env.CLIENT_ID;
+const GUILD_ID = process.env.GUILD_ID;
+
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
 client.once(Events.ClientReady, () => {
-  console.log(`Logged in as ${client.user.tag}`);
+    console.log(`Logged in as ${client.user.tag}`);
 });
 
 client.on(Events.InteractionCreate, async interaction => {
-  if (!interaction.isChatInputCommand()) return;
-  if (interaction.commandName === 'ping') {
-    await interaction.reply('Pong!');
-  }
+    if (!interaction.isChatInputCommand()) return;
+    if (interaction.commandName === 'ping') {
+        await interaction.reply('Pong!');
+    }
 });
 
-client.login(process.env.TOKEN);
+// Verifica que el token exista antes de intentar iniciar sesión.
+if (TOKEN) {
+    client.login(TOKEN);
+} else {
+    console.error("ERROR: Discord Token (TOKEN) not found in environment variables.");
+}
+
 
 // Register slash command
 const commands = [
-  new SlashCommandBuilder()
-    .setName('ping')
-    .setDescription('Replies with Pong!')
+    new SlashCommandBuilder()
+        .setName('ping')
+        .setDescription('Replies with Pong!')
 ].map(cmd => cmd.toJSON());
 
-const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
+const rest = new REST({ version: '10' }).setToken(TOKEN);
 
 (async () => {
-  try {
-    await rest.put(
-      Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
-      { body: commands }
-    );
-    console.log('Slash command registered!');
-  } catch (error) {
-    console.error(error);
-  }
+    if (!CLIENT_ID || !GUILD_ID || !TOKEN) {
+        console.error("ERROR: CLIENT_ID, GUILD_ID, or TOKEN is missing. Cannot register slash commands.");
+        return;
+    }
+    
+    try {
+        await rest.put(
+            Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID),
+            { body: commands }
+        );
+        console.log('Slash command registered!');
+    } catch (error) {
+        console.error('Error registering slash commands:', error);
+    }
 })();
