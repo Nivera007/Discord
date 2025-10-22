@@ -8,14 +8,20 @@ if (process.env.NODE_ENV !== 'production' && !process.env.TOKEN) {
 }
 
 const { Client, GatewayIntentBits, Events, REST, Routes, SlashCommandBuilder } = require('discord.js');
+// Importar Express para crear un servidor web mínimo
+const express = require('express');
 
-// Usamos process.env directamente, ya sea que dotenv lo haya cargado (local) 
-// o Render lo haya inyectado (producción).
+
+// --- Variables de Entorno ---
 const TOKEN = process.env.TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 const GUILD_ID = process.env.GUILD_ID;
 
+// Render requiere que el puerto se obtenga del entorno (o use 10000 por defecto)
+const PORT = process.env.PORT || 3000;
 
+
+// --- 1. CONFIGURACIÓN DEL BOT DE DISCORD ---
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
 client.once(Events.ClientReady, () => {
@@ -33,10 +39,26 @@ client.on(Events.InteractionCreate, async interaction => {
 if (TOKEN) {
     client.login(TOKEN);
 } else {
-    console.error("ERROR: Discord Token (TOKEN) not found in environment variables.");
+    console.error("ERROR: Discord Token (TOKEN) not found in environment variables. Bot will not connect.");
 }
 
 
+// --- 2. SERVIDOR WEB MÍNIMO PARA RENDER ---
+const app = express();
+
+// Ruta principal simple para que Render sepa que el servicio está 'Vivo'
+app.get('/', (req, res) => {
+    // Muestra que el bot está activo pero no responde a peticiones web
+    res.send('Discord Bot is running and connected.'); 
+});
+
+// Inicia el servidor Express en el puerto que Render le asigne
+app.listen(PORT, () => {
+    console.log(`Web server listening on port ${PORT}`);
+});
+
+
+// --- 3. REGISTRO DE COMANDOS SLASH ---
 // Register slash command
 const commands = [
     new SlashCommandBuilder()
