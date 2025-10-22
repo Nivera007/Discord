@@ -1,5 +1,7 @@
 // Verifica si NO es un entorno de producción (como Render) Y dotenv NO está ya cargado
-if (!process.env.NODE_ENV === 'production' && process.env.TOKEN === undefined) {
+// Corregido: La condición !(...) asegura que solo se cargue dotenv si no estamos en producción o si el TOKEN no está definido.
+// Render establece NODE_ENV a 'production' por defecto.
+if (process.env.NODE_ENV !== 'production' && !process.env.TOKEN) {
     // Si la aplicación no tiene un token definido (estamos localmente sin variables de hosting),
     // carga el archivo .env localmente.
     require('dotenv').config();
